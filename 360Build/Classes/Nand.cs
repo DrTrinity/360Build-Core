@@ -67,13 +67,23 @@ namespace _360Build
             byte[] _3BLOffset = BitConverter.GetBytes(Utils.ByteArrayToInt(_2BLOffset) + Utils.ByteArrayToInt(_2BLlength));
             Array.Reverse(_3BLOffset);
             byte[] _3BLlength = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset) + 0xC, 4);
-            byte[] _3BLsalt = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset) + 0x10, 0x10);
-            byte[] _3BLkey = Utils.ReturnPortion(new HMACSHA1(_2BLkey).ComputeHash(Utils.ConcatByteArrays(_3BLsalt, CPUKey)), 0, 0x10); ;
+            byte[] _3BLsalt = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset) + 0x10, 0x10), CPUKey);
+            byte[] _3BLkey = Utils.ReturnPortion(new HMACSHA1(_2BLkey).ComputeHash(_3BLsalt), 0, 0x10);
 
             bool CBSplit = (Utils.ByteArrayToString(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset), 2)) == "4342");
 
             if (CBSplit)
-            {         
+            {
+                //New CB Encryption Scheme
+                if ((Utils.ByteArrayToInt(Utils.ReturnPortion(_2BL.Data, 0x6, 2)) & 0x1000) != 0)
+                {
+                    byte[] _2BLHeader = Utils.ReturnPortion(_2BL.Data, 0, 0x10);
+                    _2BLHeader[0x6] = 0x00;
+                    _2BLHeader[0x7] = 0x00;
+                    _3BLsalt = Utils.ConcatByteArrays(_3BLsalt, _2BLHeader);
+                    _3BLkey = Utils.ReturnPortion(new HMACSHA1(_2BLkey).ComputeHash(_3BLsalt), 0, 0x10);
+                }
+
                 byte[] _3BLfordec = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset) + 0x20, Utils.ByteArrayToInt(_3BLlength) - 0x20);
                 byte[] _3BLdecrypted = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset), 0x10), _3BLkey, RC4.Apply(_3BLfordec, _3BLkey));
                 _3BL = new Bootloader(_3BLdecrypted);
