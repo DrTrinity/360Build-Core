@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 namespace _360Build
 {
@@ -95,7 +96,7 @@ namespace _360Build
             }
         }
 
-        public static byte[] ReturnPortion(byte[] data, int offset, int length)
+        public static byte[] GetBytes(byte[] data, int offset, int length)
         {
             if (data == null) return null;
             if (length < 0) length = 0;
@@ -113,8 +114,20 @@ namespace _360Build
             return templist;
         }
 
+        public static int GetInt(byte[] data, int offset, int length)
+        {
+            byte[] bytes = GetBytes(data, offset, length);
+            return Convert.ToInt32(ByteArrayToString(bytes), 16);
+        }
+
         public static int ByteArrayToInt(byte[] value)
         {
+            return Convert.ToInt32(ByteArrayToString(value), 16);
+        }
+
+        public static int ByteArrayToIntBE(byte[] value)
+        {
+            Array.Reverse(value);
             return Convert.ToInt32(ByteArrayToString(value), 16);
         }
 
@@ -150,6 +163,12 @@ namespace _360Build
         public static byte[] ConcatByteArrays(params byte[][] arrays)
         {
             return arrays.SelectMany(x => x).ToArray();
+        }
+
+        public static byte[] GetHMACKey(byte[] key, byte[] salt)
+        {
+            byte[] hash = new HMACSHA1(key).ComputeHash(salt);
+            return Utils.GetBytes(hash, 0, 0x10);
         }
     }
 }

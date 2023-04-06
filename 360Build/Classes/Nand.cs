@@ -17,8 +17,8 @@ namespace _360Build
         public byte[] Data { get; set; }
         public int Length { get; set; }
         public int Version { get; set; }
-        public byte[] _2BLOffset { get; set; }
-        public byte[] _6BLOffset { get; set; }
+        public int _2BLOffset { get; set; }
+        public int _6BLOffset { get; set; }
         public byte[] KVOffset { get; set; }
         public byte[] SMCOffset { get; set; }
         public byte[] SMCLength { get; set; }
@@ -32,9 +32,9 @@ namespace _360Build
         public Bootloader _8BL; //CF1 if present
         public Bootloader _9BL; //CG1 if present
 
-        public Nand(string path, string CPUKey)
+        public Nand(string path, string cpukey)
         {
-            this.CPUKey = Utils.StringToByteArray(CPUKey);
+            CPUKey = Utils.StringToByteArray(cpukey);
             Data = File.ReadAllBytes(path);
 
             deconstruct();
@@ -47,111 +47,93 @@ namespace _360Build
             Data = Utils.UnEcc(Data);
 
             //Set Variables
-            Version = Utils.ByteArrayToInt(Utils.ReturnPortion(Data, 0x2, 2));
+            Version = Utils.GetInt(Data, 0x2, 2);
             Length = Data.Length;
-            _2BLOffset = Utils.ReturnPortion(Data, 0x8, 4);
-            _6BLOffset = Utils.ReturnPortion(Data, 0xC, 4);
-            KVOffset = Utils.ReturnPortion(Data, 0x6C, 4);
-            SMCOffset = Utils.ReturnPortion(Data, 0x7C, 4);
-            SMCLength = Utils.ReturnPortion(Data, 0x78, 4);
+            _2BLOffset = Utils.GetInt(Data, 0x8, 4);
+            _6BLOffset = Utils.GetInt(Data, 0xC, 4);
+            KVOffset = Utils.GetBytes(Data, 0x6C, 4);
+            SMCOffset = Utils.GetBytes(Data, 0x7C, 4);
+            SMCLength = Utils.GetBytes(Data, 0x78, 4);
+
 
             //2BL Decryption
-            byte[] _2BLlength = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_2BLOffset) + 0xC, 4);
-            byte[] _2BLsalt = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_2BLOffset) + 0x10, 0x10);
-            byte[] _2BLkey = Utils.ReturnPortion(new HMACSHA1(_1BLKey).ComputeHash(_2BLsalt), 0, 0x10);
-            byte[] _2BLfordec = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_2BLOffset) + 0x20, Utils.ByteArrayToInt(_2BLlength) - 0x20);
-            byte[] _2BLdecrypted = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_2BLOffset), 0x10), _2BLkey, RC4.Apply(_2BLfordec, _2BLkey));
-            _2BL = new Bootloader(_2BLdecrypted);
+            byte[] _2BLsalt = Utils.GetBytes(Data, _2BLOffset + 0x10, 0x10);
+            byte[] _2BLkey = Utils.GetHMACKey(_1BLKey, _2BLsalt);
+            _2BL = new Bootloader(Data, _2BLOffset);
+            _2BL.decrypt(_2BLkey);
+
 
             //3BL Decryption
-            byte[] _3BLOffset = BitConverter.GetBytes(Utils.ByteArrayToInt(_2BLOffset) + Utils.ByteArrayToInt(_2BLlength));
-            Array.Reverse(_3BLOffset);
-            byte[] _3BLlength = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset) + 0xC, 4);
-            byte[] _3BLsalt = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset) + 0x10, 0x10), CPUKey);
-            byte[] _3BLkey = Utils.ReturnPortion(new HMACSHA1(_2BLkey).ComputeHash(_3BLsalt), 0, 0x10);
-
-            bool CBSplit = (Utils.ByteArrayToString(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset), 2)) == "4342");
+            int _3BLOffset = _2BLOffset + _2BL.Length;
+            byte[] _3BLkey = {};
+            bool CBSplit = Utils.GetInt(Data, _3BLOffset, 2) == 0x4342;
 
             if (CBSplit)
             {
+                byte[] _3BLsalt = Utils.ConcatByteArrays(Utils.GetBytes(Data, _3BLOffset + 0x10, 0x10), CPUKey);
+
                 //New CB Encryption Scheme
-                if ((Utils.ByteArrayToInt(Utils.ReturnPortion(_2BL.Data, 0x6, 2)) & 0x1000) != 0)
+                if ((Utils.GetInt(_2BL.Data, 0x6, 2) & 0x1000) != 0)
                 {
-                    byte[] _2BLHeader = Utils.ReturnPortion(_2BL.Data, 0, 0x10);
+                    byte[] _2BLHeader = _2BL.Header;
                     _2BLHeader[0x6] = 0x00;
                     _2BLHeader[0x7] = 0x00;
                     _3BLsalt = Utils.ConcatByteArrays(_3BLsalt, _2BLHeader);
-                    _3BLkey = Utils.ReturnPortion(new HMACSHA1(_2BLkey).ComputeHash(_3BLsalt), 0, 0x10);
                 }
 
-                byte[] _3BLfordec = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset) + 0x20, Utils.ByteArrayToInt(_3BLlength) - 0x20);
-                byte[] _3BLdecrypted = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_3BLOffset), 0x10), _3BLkey, RC4.Apply(_3BLfordec, _3BLkey));
-                _3BL = new Bootloader(_3BLdecrypted);
+                _3BLkey = Utils.GetHMACKey(_2BLkey, _3BLsalt);
+                _3BL = new Bootloader(Data, _3BLOffset);
+                _3BL.decrypt(_3BLkey);
             }
 
+
             //4BL Decryption
-            byte[] _4BLOffset = BitConverter.GetBytes(Utils.ByteArrayToInt(CBSplit ? _3BLOffset : _2BLOffset) + Utils.ByteArrayToInt(CBSplit ? _3BLlength : _2BLlength));
-            Array.Reverse(_4BLOffset);
-            byte[] _4BLlength = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_4BLOffset) + 0xC, 4);
-            byte[] _4BLsalt = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_4BLOffset) + 0x10, 0x10);
-            byte[] _4BLkey = Utils.ReturnPortion(new HMACSHA1(CBSplit ? _3BLkey : _2BLkey).ComputeHash(_4BLsalt), 0, 0x10);
-            byte[] _4BLfordec = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_4BLOffset) + 0x20, Utils.ByteArrayToInt(_4BLlength) - 0x20);
-            byte[] _4BLdecrypted = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_4BLOffset), 0x10), _4BLkey, RC4.Apply(_4BLfordec, _4BLkey));
-            _4BL = new Bootloader(_4BLdecrypted);
+            int _4BLOffset = CBSplit ? _3BLOffset + _3BL.Length : _2BLOffset + _2BL.Length;
+            byte[] _4BLsalt = Utils.GetBytes(Data, _4BLOffset + 0x10, 0x10);
+            byte[] _4BLkey = Utils.GetHMACKey(CBSplit ? _3BLkey : _2BLkey, _4BLsalt);
+            _4BL = new Bootloader(Data, _4BLOffset);
+            _4BL.decrypt(_4BLkey);
+
 
             //5BL Decryption (Padding Needs to be added to the end)
-            byte[] _5BLOffset = BitConverter.GetBytes(Utils.ByteArrayToInt(_4BLOffset) + Utils.ByteArrayToInt(_4BLlength));
-            Array.Reverse(_5BLOffset);
-            byte[] _5BLlength = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_5BLOffset) + 0xC, 4);
-            byte[] _5BLsalt = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_5BLOffset) + 0x10, 0x10);
-            byte[] _5BLkey = Utils.ReturnPortion(new HMACSHA1(_4BLkey).ComputeHash(_5BLsalt), 0, 0x10);
-            byte[] _5BLfordec = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_5BLOffset) + 0x20, Utils.ByteArrayToInt(_5BLlength) - 0x20);
-            byte[] _5BLdecrypted = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_5BLOffset), 0x10), _5BLkey, RC4.Apply(_5BLfordec, _5BLkey));
-            _5BL = new Bootloader(_5BLdecrypted);
+            int _5BLOffset = _4BLOffset + _4BL.Length;
+            byte[] _5BLsalt = Utils.GetBytes(Data, _5BLOffset + 0x10, 0x10);
+            byte[] _5BLkey = Utils.GetHMACKey(_4BLkey, _5BLsalt);
+            _5BL = new Bootloader(Data, _5BLOffset);
+            _5BL.decrypt(_5BLkey);
+
 
             //6BL Decryption
-            byte[] _6BLlength = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_6BLOffset) + 0xC, 4);
-            byte[] _6BLsalt = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_6BLOffset) + 0x20, 0x10);
-            byte[] _6BLkey = Utils.ReturnPortion(new HMACSHA1(_1BLKey).ComputeHash(_6BLsalt), 0, 0x10);
-            byte[] _6BLfordec = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_6BLOffset) + 0x30, Utils.ByteArrayToInt(_6BLlength) - 0x30);
-            byte[] _6BLdecrypted = RC4.Apply(_6BLfordec, _6BLkey);
-            byte[] KeyFor7BL = Utils.ReturnPortion(_6BLdecrypted, 0x300, 0x10);
-            byte[] _6BLdecryptedFinal = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_6BLOffset), 0x20), KeyFor7BL, _6BLdecrypted);
-            _6BL = new Bootloader(_6BLdecryptedFinal);
+            byte[] _6BLsalt = Utils.GetBytes(Data, _6BLOffset + 0x20, 0x10);
+            byte[] _6BLkey = Utils.GetHMACKey(_1BLKey, _6BLsalt);
+            _6BL = new Bootloader(Data, _6BLOffset, 0x20);
+            _6BL.decrypt(_6BLkey);
+            _6BL.Key = Utils.GetBytes(_6BL.Data, 0x330, 0x10);
 
 
             //7BL Decryption
-            byte[] _7BLOffset = BitConverter.GetBytes(Utils.ByteArrayToInt(_6BLOffset) + Utils.ByteArrayToInt(_6BLlength));
-            Array.Reverse(_7BLOffset);
-            byte[] _7BLlength = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_7BLOffset) + 0xC, 4);
-            byte[] _7BLsalt = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_7BLOffset) + 0x10, 0x10);
-            byte[] _7BLkey = Utils.ReturnPortion(new HMACSHA1(KeyFor7BL).ComputeHash(_7BLsalt), 0, 0x10);
-            byte[] _7BLfordec = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_7BLOffset) + 0x20, Utils.ByteArrayToInt(_7BLlength) - 0x20);
-            byte[] _7BLdecrypted = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_7BLOffset), 0x10), _7BLkey, RC4.Apply(_7BLfordec, _7BLkey));
-            _7BL = new Bootloader(_7BLdecrypted);
+            int _7BLOffset = _6BLOffset + _6BL.Length;
+            byte[] _7BLsalt = Utils.GetBytes(Data, _7BLOffset + 0x10, 0x10);
+            byte[] _7BLkey = Utils.GetHMACKey(_6BL.Key, _7BLsalt);
+            _7BL = new Bootloader(Data, _7BLOffset);
+            _7BL.decrypt(_7BLkey);
+
 
             //8BL Decryption
-            byte[] _8BLOffset = BitConverter.GetBytes(Utils.ByteArrayToInt(_6BLOffset) + 0x10000);
-            Array.Reverse(_8BLOffset);
-            byte[] _8BLlength = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_8BLOffset) + 0xC, 4);
-            byte[] _8BLsalt = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_8BLOffset) + 0x20, 0x10);
-            byte[] _8BLkey = Utils.ReturnPortion(new HMACSHA1(_1BLKey).ComputeHash(_8BLsalt), 0, 0x10);
-            byte[] _8BLfordec = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_8BLOffset) + 0x30, Utils.ByteArrayToInt(_8BLlength) - 0x30);
-            byte[] _8BLdecrypted = RC4.Apply(_8BLfordec, _8BLkey);
-            byte[] KeyFor9BL = Utils.ReturnPortion(_8BLdecrypted, 0x300, 0x10);
-            byte[] _8BLdecryptedFinal = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_8BLOffset), 0x20), KeyFor9BL, _8BLdecrypted);
-            _8BL = new Bootloader(_8BLdecryptedFinal);
+            int _8BLOffset = _6BLOffset + 0x10000;
+            byte[] _8BLsalt = Utils.GetBytes(Data, _8BLOffset + 0x20, 0x10);
+            byte[] _8BLkey = Utils.GetHMACKey(_1BLKey, _8BLsalt);
+            _8BL = new Bootloader(Data, _8BLOffset, 0x20);
+            _8BL.decrypt(_8BLkey);
+            _8BL.Key = Utils.GetBytes(_8BL.Data, 0x330, 0x10);
 
 
             //9BL Decryption
-            byte[] _9BLOffset = BitConverter.GetBytes(Utils.ByteArrayToInt(_8BLOffset) + Utils.ByteArrayToInt(_8BLlength));
-            Array.Reverse(_9BLOffset);
-            byte[] _9BLlength = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_9BLOffset) + 0xC, 4);
-            byte[] _9BLsalt = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_9BLOffset) + 0x10, 0x10);
-            byte[] _9BLkey = Utils.ReturnPortion(new HMACSHA1(KeyFor9BL).ComputeHash(_9BLsalt), 0, 0x10);
-            byte[] _9BLfordec = Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_9BLOffset) + 0x20, Utils.ByteArrayToInt(_9BLlength) - 0x20);
-            byte[] _9BLdecrypted = Utils.ConcatByteArrays(Utils.ReturnPortion(Data, Utils.ByteArrayToInt(_9BLOffset), 0x10), _9BLkey, RC4.Apply(_9BLfordec, _9BLkey));
-            _9BL = new Bootloader(_9BLdecrypted);
+            int _9BLOffset = _8BLOffset + _8BL.Length;
+            byte[] _9BLsalt = Utils.GetBytes(Data, _9BLOffset + 0x10, 0x10);
+            byte[] _9BLkey = Utils.GetHMACKey(_8BL.Key, _9BLsalt);
+            _9BL = new Bootloader(Data, _9BLOffset);
+            _9BL.decrypt(_9BLkey);
         }
 
     }
