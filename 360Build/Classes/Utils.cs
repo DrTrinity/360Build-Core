@@ -96,7 +96,7 @@ namespace _360Build
             }
         }
 
-        public static byte[] ReturnPortion(byte[] data, int offset, int length)
+        public static byte[] GetBytes(byte[] data, int offset, int length)
         {
             if (data == null) return null;
             if (length < 0) length = 0;
@@ -116,7 +116,7 @@ namespace _360Build
 
         public static int GetInt(byte[] data, int offset, int length)
         {
-            byte[] bytes = ReturnPortion(data, offset, length);
+            byte[] bytes = GetBytes(data, offset, length);
             return Convert.ToInt32(ByteArrayToString(bytes), 16);
         }
 
@@ -168,7 +168,7 @@ namespace _360Build
         public static byte[] GetHMACKey(byte[] key, byte[] salt)
         {
             byte[] hash = new HMACSHA1(key).ComputeHash(salt);
-            return Utils.ReturnPortion(hash, 0, 0x10);
+            return Utils.GetBytes(hash, 0, 0x10);
         }
     }
 }

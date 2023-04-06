@@ -29,9 +29,9 @@ namespace _360Build
             EntrypointOffset = Utils.GetInt(encData, offset + 0x8, 4);
             Length = Utils.GetInt(encData, offset + 0xC, 4);
             Version = Utils.GetInt(encData, offset + 0x2, 2);
-            Header = Utils.ReturnPortion(encData, offset, headerLength);
+            Header = Utils.GetBytes(encData, offset, headerLength);
 
-            _EncodedData = Utils.ReturnPortion(encData, offset + headerLength + 0x10, Length - headerLength - 0x10);
+            _EncodedData = Utils.GetBytes(encData, offset + headerLength + 0x10, Length - headerLength - 0x10);
             _HeaderLength = headerLength;
         }
         
@@ -43,7 +43,7 @@ namespace _360Build
 
         public void decryptPatchSlot()
         {
-
+            //TODO: maybe different decrypt for patchslots?
         }
     }
 }
