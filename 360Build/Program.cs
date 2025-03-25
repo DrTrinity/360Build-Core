@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using System.IO;
+using static _360Build.ConsoleLogger;
 
 namespace _360Build
 {
@@ -11,7 +10,7 @@ namespace _360Build
     {
         static void Main(string[] args)
         {
-            
+
         }
     }
 }

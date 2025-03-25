@@ -5,12 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 
 namespace _360Build
 {
     internal class Utils
     {
-
         public enum BLOCK_TYPE
         {
             NONE,
@@ -169,6 +169,14 @@ namespace _360Build
         {
             byte[] hash = new HMACSHA1(key).ComputeHash(salt);
             return Utils.GetBytes(hash, 0, 0x10);
+        }
+
+        public static byte[] GenerateSalt()
+        {
+            Random r = new Random();
+            byte[] _salt = new byte[0x10];
+            r.NextBytes(_salt);
+            return _salt;
         }
     }
 }
