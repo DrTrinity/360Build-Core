@@ -95,7 +95,7 @@ namespace _360Build
                 return wms.ToArray();
             }
         }
-
+        
         public static byte[] GetBytes(byte[] data, int offset, int length)
         {
             if (data == null) return null;

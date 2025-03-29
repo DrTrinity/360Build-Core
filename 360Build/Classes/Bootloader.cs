@@ -1,8 +1,10 @@
 ﻿using RC4Cryptography;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Net.Security;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,9 +12,8 @@ using static _360Build.ConsoleLogger;
 
 namespace _360Build
 {
-    internal class Bootloader
+    internal abstract class Bootloader
     {
-
         public enum BootloaderType : ushort
         {
             //Retail
@@ -59,33 +60,92 @@ namespace _360Build
         public int EntrypointOffset { get; set; }
         public int Length { get; set; }
         public int Version { get; set; }
-        public int LDV { get; set; }
 
-        private byte[] _EncodedData { get; set; }
-        private byte[] _DecodedData { get; set; }
+        protected byte[] _EncodedData { get; set; }
+        protected byte[] _DecodedData { get; set; }
         private int _HeaderLength { get; set; }
 
         public bool IsEncrypted { get; set; }
         public BootloaderType Type { get; set; }
 
-        public Bootloader(byte[] encData, int offset, int headerLength = 0x10)
+
+        public Bootloader(byte[] encData, int offset, bool encrypted = true)
         {
             EntrypointOffset = Utils.GetInt(encData, offset + 0x8, 4);
             Length = Utils.GetInt(encData, offset + 0xC, 4);
             Version = Utils.GetInt(encData, offset + 0x2, 2);
-            Header = Utils.GetBytes(encData, offset, headerLength);
+            Header = Utils.GetBytes(encData, offset, 0x10);
             Type = (BootloaderType)Utils.GetInt(encData, offset, 2);
-            Salt = Utils.GetBytes(encData, offset + GetSaltOffset(Type), 0x10);
+            Salt = Utils.GetBytes(encData, offset + 0x10, 0x10);
+            IsEncrypted = encrypted;
 
-            IsEncrypted = true;
+            if (IsEncrypted)
+            {
+                _EncodedData = Utils.GetBytes(encData, offset + Header.Length + 0x10, Length - Header.Length - 0x10);
+            }
+            else
+            {
+                _DecodedData = Utils.GetBytes(encData, offset + Header.Length + 0x10, Length - Header.Length - 0x10);
+            }
 
-            _EncodedData = Utils.GetBytes(encData, offset + headerLength + 0x10, Length - headerLength - 0x10);
-            _HeaderLength = headerLength;
+            _HeaderLength = Header.Length;
         }
 
-        public static Bootloader ReadFromFile(string path)
+        public static Bootloader Create(byte[] data, int offset, Bootloader.BootloaderType bootloaderType)
         {
-            return new Bootloader(File.ReadAllBytes(path), 0);
+            try{
+                switch (bootloaderType)
+                {
+                    case Bootloader.BootloaderType.SB:
+                        return new SBBootloader(data, offset);  
+                    case Bootloader.BootloaderType.SC:
+                        return new SCBootloader(data, offset);  
+                    case Bootloader.BootloaderType.SD:
+                        return new SDBootloader(data, offset); 
+                    case Bootloader.BootloaderType.SE:
+                        return new SEBootloader(data, offset);  
+                    default:
+                        throw new InvalidOperationException($"Unknown Bootloader Type {bootloaderType}");
+                }
+            }
+            catch(InvalidOperationException ex)
+            {
+                PrintError(ex.Message);
+                throw;
+            }
+        }
+
+        public static Bootloader CreateFromFile(string path,  Bootloader.BootloaderType bootloaderType)
+        {
+            try{
+
+                byte[] data = File.ReadAllBytes(path);
+
+                switch (bootloaderType)
+                {
+                    case Bootloader.BootloaderType.SB:
+                        return new SBBootloader(data, 0, false);  
+                    case Bootloader.BootloaderType.SC:
+                        return new SCBootloader(data, 0, false);  
+                    case Bootloader.BootloaderType.SD:
+                        return new SDBootloader(data, 0, false); 
+                    case Bootloader.BootloaderType.SE:
+                        return new SEBootloader(data, 0, false);  
+                    default:
+                        throw new InvalidOperationException($"Unknown Bootloader Type {bootloaderType}");
+                }
+            }
+            catch (FileNotFoundException ex)
+            {
+                PrintError($"File not found at {ex.FileName}");
+                throw;
+            }
+            catch(InvalidOperationException ex)
+            {
+                PrintError(ex.Message);
+                throw;
+            }
+
         }
 
         public void Encrypt(Bootloader prevBL = null, byte[] cpuKey = null)
@@ -115,13 +175,20 @@ namespace _360Build
                 Salt = Utils.ConcatByteArrays(Salt, cpuKey);
             }
 
-            Key = Utils.GetHMACKey(_prevKey, _salt);
+            if (Type == BootloaderType.SC)
+            {
+                Key = Utils.GetHMACKey(new byte[0x10], _salt);
+            }
+            else
+            {
+                Key = Utils.GetHMACKey(_prevKey, _salt);
+            }
             _EncodedData = RC4.Apply(_DecodedData, Key);
 
-            if ((prevBL != null) && (prevBL.Type == BootloaderType.CF))
-            {
-                Key = Utils.GetBytes(Data, 0x330, 0x10);
-            }
+            // if ((prevBL != null) && (prevBL.Type == BootloaderType.CF))
+            // {
+            //     Key = Utils.GetBytes(Data, 0x330, 0x10);
+            // }
 
             IsEncrypted = true;
         }
@@ -135,13 +202,13 @@ namespace _360Build
 
             if ((prevBL != null) && (prevBL.Type == BootloaderType.CB) && (Type == BootloaderType.CB))
             {
-                PrintDebug("CB Is split");
+                PrintDebug("CB is split");
                 _salt = Utils.ConcatByteArrays(_salt, cpuKey);
 
                 //New CB Encryption Scheme
                 if ((Utils.GetInt(Data, 0x6, 2) & 0x1000) != 0)
                 {
-                    PrintDebug("CB New Encryption Scheme");
+                    PrintDebug("CB is using v2 encryption scheme");
                     byte[] _2BLHeader = prevBL.Header;
                     _2BLHeader[0x6] = 0x00;
                     _2BLHeader[0x7] = 0x00;
@@ -149,11 +216,17 @@ namespace _360Build
                 }
             }
 
-            Key = Utils.GetHMACKey(_prevKey, _salt);
-
             if ((prevBL != null) && (prevBL.Type == BootloaderType.CF))
             {
                 Key = Utils.GetBytes(Data, 0x330, 0x10);
+            }
+            else if(Type == BootloaderType.SC)
+            {
+                Key = Utils.GetHMACKey(new byte[0x10], _salt);
+            }
+            else
+            {
+                Key = Utils.GetHMACKey(_prevKey, _salt);
             }
 
             _DecodedData = RC4.Apply(_EncodedData, Key);
@@ -162,27 +235,82 @@ namespace _360Build
 
         }
 
-        private byte GetSaltOffset(BootloaderType type)
-        {
-            byte _saltOffset;
+        // private byte GetSaltOffset(BootloaderType type)
+        // {
+        //     byte _saltOffset;
 
-            switch (type)
+        //     switch (type)
+        //     {
+        //         case BootloaderType.CF:
+        //             _saltOffset = 0x20;
+        //             break;
+        //         default:
+        //             _saltOffset = 0x10; // Default salt offset
+        //             break;
+        //     }
+
+        //     return _saltOffset;
+
+        // }
+
+    }
+
+    internal class SBBootloader : Bootloader
+        {
+            public byte[] PairingData { get; set; }
+            public byte LDV { get; set; }
+            public byte ConsoleType { get; set; }
+            public byte ConsoleSequence { get; set; }
+            public byte[] ConsoleSequenceAllow { get; set; }
+
+
+            public SBBootloader(byte[] encData, int offset, bool encrypted = true) : base(encData, offset, encrypted)
             {
-                case BootloaderType.CF:
-                    _saltOffset = 0x20;
-                    break;
-                default:
-                    _saltOffset = 0x10; // Default salt offset
-                    break;
+                
             }
 
-            return _saltOffset;
-
+            public new void Decrypt(Bootloader prevBL = null, byte[] cpuKey = null)
+            {
+                base.Decrypt(prevBL, cpuKey);
+                
+                PairingData = Utils.GetBytes(Data, 0x20, 4);
+                LDV = Utils.GetBytes(Data, 0x24, 1)[0];
+                ConsoleType = Utils.GetBytes(Data, 0x3B1, 1)[0];
+                ConsoleSequence = Utils.GetBytes(Data, 0x3B2, 1)[0];
+                ConsoleSequenceAllow = Utils.GetBytes(Data, 0x3B3, 2);
+            }
         }
 
-        public void DecryptPatchSlot()
+        internal class SCBootloader : Bootloader
         {
-            //TODO: maybe different decrypt for patchslots?
+            public SCBootloader(byte[] encData, int offset, bool encrypted = true) : base(encData, offset, encrypted)
+            {
+
+            }
+
         }
-    }
+
+        internal class SDBootloader : Bootloader
+        {
+            public SDBootloader(byte[] encData, int offset, bool encrypted = true) : base(encData, offset, encrypted)
+            {
+
+            }
+        }
+
+        internal class SEBootloader : Bootloader
+        {
+            public SEBootloader(byte[] encData, int offset, bool encrypted = true) : base(encData, offset, encrypted)
+            {
+                int _bytesToPad = encrypted ? _EncodedData.Length % 0x10 : _DecodedData.Length % 0x10;
+
+                if(_bytesToPad != 0)
+                {
+                    PrintDebug("Padding SE...");
+                    _EncodedData = Utils.GetBytes(encData, offset + Header.Length + 0x10, Length - Header.Length - 0x10 + (0x10 - _bytesToPad));
+                }
+            }
+
+            
+        }
 }

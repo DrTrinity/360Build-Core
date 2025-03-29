@@ -34,6 +34,20 @@ namespace _360Build
             }
         }
 
+        public static void PrintSplash()
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(@"
+       _____ _____ ____  ____        _ __    __
+      |__  // ___// __ \/ __ )__  __(_) /___/ /
+       /_ </ __ \/ / / / __  / / / / / / __  / 
+     ___/ / /_/ / /_/ / /_/ / /_/ / / / /_/ /  
+    /____/\____/\____/_____/\__,_/_/_/\__,_/   
+                          Made by DrTrinity");
+            Console.ResetColor();
+            Console.WriteLine("");
+        }
+
         // Method to print success messages in green
         public static void PrintSuccess(string message, LogLevel level = LogLevel.Success)
         {

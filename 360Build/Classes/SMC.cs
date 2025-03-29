@@ -27,10 +27,12 @@ namespace _360Build
             IsEncrypted = true;
         }
 
-        public static SMC ReadFromFile(string path)
+        public static SMC CreateFromFile(string path)
         {
             byte[] smc_raw = File.ReadAllBytes(path);
-            return new SMC(smc_raw, 0, smc_raw.Length);
+            SMC smc = new SMC(smc_raw, 0, smc_raw.Length);
+            smc.IsEncrypted = false;
+            return smc;
         }
 
         public void Encrypt()
