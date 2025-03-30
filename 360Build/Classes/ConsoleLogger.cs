@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
+using System.Reflection;
 
 namespace _360Build
 {
@@ -37,13 +38,13 @@ namespace _360Build
         public static void PrintSplash()
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(@"
+            Console.WriteLine(@$"
        _____ _____ ____  ____        _ __    __
       |__  // ___// __ \/ __ )__  __(_) /___/ /
        /_ </ __ \/ / / / __  / / / / / / __  / 
      ___/ / /_/ / /_/ / /_/ / /_/ / / / /_/ /  
     /____/\____/\____/_____/\__,_/_/_/\__,_/   
-                          Made by DrTrinity");
+    Version: {Assembly.GetExecutingAssembly().GetName().Version}      Made by DrTrinity");
             Console.ResetColor();
             Console.WriteLine("");
         }

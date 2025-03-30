@@ -15,7 +15,6 @@ namespace _360Build
         static void Main(string[] args)
         {
             PrintSplash();
-            
         }
     }
 }
