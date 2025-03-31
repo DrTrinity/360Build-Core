@@ -1,8 +1,4 @@
-﻿using System;
-using System.IO;
-using static _360Build.Classes.ConsoleLogger;
-
-namespace _360Build.Classes;
+﻿namespace _360Build_Core.Classes;
 
 internal abstract class Bootloader
 {
@@ -99,7 +95,7 @@ internal abstract class Bootloader
         }
         catch (InvalidOperationException ex)
         {
-            PrintError(ex.Message);
+            //PrintError(ex.Message);
             throw;
         }
     }
@@ -132,12 +128,12 @@ internal abstract class Bootloader
         }
         catch (FileNotFoundException ex)
         {
-            PrintError($"File not found at {ex.FileName}");
+            //PrintError($"File not found at {ex.FileName}");
             throw;
         }
         catch (InvalidOperationException ex)
         {
-            PrintError(ex.Message);
+            //PrintError(ex.Message);
             throw;
         }
     }
@@ -150,7 +146,7 @@ internal abstract class Bootloader
         }
         catch (Exception ex)
         {
-            PrintError($"Error dumping bootloader {Type} {Version} to {path}: {ex.Message}");
+            //PrintError($"Error dumping bootloader {Type} {Version} to {path}: {ex.Message}");
             throw;
         }
     }
@@ -207,7 +203,7 @@ internal abstract class Bootloader
             //New CB Encryption Scheme
             if ((Utils.GetInt(Data, 0x6, 2) & 0x1000) != 0)
             {
-                PrintDebug("CB is using v2 encryption scheme");
+                //PrintDebug("CB is using v2 encryption scheme");
                 var _2BLHeader = prevBL.Header;
                 _2BLHeader[0x6] = 0x00;
                 _2BLHeader[0x7] = 0x00;
@@ -293,7 +289,7 @@ internal class SEBootloader : Bootloader
 
         if (_bytesToPad != 0)
         {
-            PrintDebug("Padding SE...");
+            //PrintDebug("Padding SE...");
             _EncodedData = Utils.GetBytes(encData, offset + Header.Length + 0x10,
                 Length - Header.Length - 0x10 + (0x10 - _bytesToPad));
         }

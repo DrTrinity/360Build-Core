@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace _360Build.Classes
+﻿namespace _360Build_Core.Classes
 {
     public static class RC4
     {

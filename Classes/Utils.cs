@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections;
-using System.IO;
-using System.Linq;
+﻿using System.Collections;
 using System.Security.Cryptography;
 
-namespace _360Build.Classes
+namespace _360Build_Core.Classes
 {
     internal static class Utils
     {

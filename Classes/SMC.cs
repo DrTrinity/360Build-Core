@@ -1,9 +1,6 @@
-﻿using System;
-using System.IO;
-using static _360Build.Classes.ConsoleLogger;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
-namespace _360Build.Classes
+namespace _360Build_Core.Classes
 {
     internal class SMC
     {
@@ -40,7 +37,7 @@ namespace _360Build.Classes
             }
             catch (Exception ex)
             {
-                PrintError($"Error dumping SMC to {path}: {ex.Message}");
+                //PrintError($"Error dumping SMC to {path}: {ex.Message}");
                 throw;
             }
         }

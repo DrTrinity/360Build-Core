@@ -1,8 +1,4 @@
-using System;
-using System.IO;
-using static _360Build.Classes.ConsoleLogger;
-
-namespace _360Build.Classes;
+namespace _360Build_Core.Classes;
 
 internal class Keyvault
 {
@@ -53,7 +49,7 @@ internal class Keyvault
         }
         catch (Exception ex)
         {
-            PrintError($"Error dumping SMC to {path}: {ex.Message}");
+            //PrintError($"Error dumping SMC to {path}: {ex.Message}");
             throw;
         }
     }

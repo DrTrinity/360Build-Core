@@ -1,4 +1,4 @@
-namespace _360Build.Classes
+namespace _360Build_Core.Classes
 {
     internal static class Globals
     {
