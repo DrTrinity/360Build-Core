@@ -1,12 +1,5 @@
-﻿using System;
-using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using static _360Build.ConsoleLogger;
+﻿using _360Build.Classes;
+using static _360Build.Classes.ConsoleLogger;
 
 namespace _360Build
 {
@@ -15,6 +8,7 @@ namespace _360Build
         static void Main(string[] args)
         {
             PrintSplash();
+            
         }
     }
 }

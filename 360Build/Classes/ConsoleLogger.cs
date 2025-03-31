@@ -1,24 +1,18 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Security.Cryptography;
 using System.Reflection;
 
-namespace _360Build
+namespace _360Build.Classes
 {
     public static class ConsoleLogger
     {
         // Nested enum LogLevel within the CommandLineOutput class
         public enum LogLevel
         {
-            Debug,   // 0
-            Info,    // 1
+            Debug, // 0
+            Info, // 1
             Warning, // 2
-            Error,   // 3
-            Fatal,    // 4
+            Error, // 3
+            Fatal, // 4
             Success
         }
 

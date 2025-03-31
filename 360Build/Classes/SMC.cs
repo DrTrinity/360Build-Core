@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using RC4Cryptography;
-using System.Security.Cryptography;
+using static _360Build.Classes.ConsoleLogger;
+using System.Text.RegularExpressions;
 
-namespace _360Build
+namespace _360Build.Classes
 {
     internal class SMC
     {
@@ -15,6 +11,7 @@ namespace _360Build
         public int Length { get; set; }
         public byte VersionMajor { get; set; }
         public byte VersionMinor { get; set; }
+        public byte[] CopyrightInfo => Utils.GetBytes(Data, 0x108, 0x22);
 
         public bool IsEncrypted { get; set; }
 
@@ -24,15 +21,28 @@ namespace _360Build
             Data = Utils.GetBytes(encData, offset, length);
             Length = length;
 
-            IsEncrypted = true;
+            IsEncrypted = GetEncryptionStatus();
         }
 
         public static SMC CreateFromFile(string path)
         {
-            byte[] smc_raw = File.ReadAllBytes(path);
-            SMC smc = new SMC(smc_raw, 0, smc_raw.Length);
+            byte[] smcRaw = File.ReadAllBytes(path);
+            SMC smc = new SMC(smcRaw, 0, smcRaw.Length);
             smc.IsEncrypted = false;
             return smc;
+        }
+
+        public void Dump(string path)
+        {
+            try
+            {
+                File.WriteAllBytes(path, Data);
+            }
+            catch (Exception ex)
+            {
+                PrintError($"Error dumping SMC to {path}: {ex.Message}");
+                throw;
+            }
         }
 
         public void Encrypt()
@@ -54,7 +64,6 @@ namespace _360Build
             IsEncrypted = true;
 
             Data = res;
-
         }
 
         public void Decrypt()
@@ -72,6 +81,7 @@ namespace _360Build
                 Keys[(i + 1) & 3] += mod;
                 Keys[(i + 2) & 3] += (mod >> 8);
             }
+
             Data = res;
 
             IsEncrypted = false;
@@ -79,6 +89,10 @@ namespace _360Build
             VersionMajor = Data[0x101];
             VersionMinor = Data[0x102];
         }
-
+        
+        private bool GetEncryptionStatus()
+        {
+            return !Regex.IsMatch(Utils.ByteArrayToString(CopyrightInfo), @"^<\s*[a-zA-Z0-9_]+\s*(?:[a-zA-Z0-9_]+\s*)*>$");
+        }
     }
 }

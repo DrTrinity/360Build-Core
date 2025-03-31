@@ -1,19 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using RC4Cryptography;
-using System.Security.Cryptography;
-using static _360Build.ConsoleLogger;
+using static _360Build.Classes.ConsoleLogger;
 using System.Buffers.Binary;
-using System.Runtime.InteropServices.Marshalling;
-using System.Net;
 
-namespace _360Build
+namespace _360Build.Classes
 {
-
     internal class XboxROM
     {
         internal static class BlockSize
@@ -32,7 +25,7 @@ namespace _360Build
             public ushort Flags { get; set; }
             public int _2BLOffset { get; set; }
             public int _6BLOffset { get; set; }
-            public byte[] Copyright_Info { get; set; }
+            public byte[] CopyrightInfo { get; set; }
             public int KVLength { get; set; }
             public int _6BLOffset2 { get; set; }
             public ushort NumOfPatchslots { get; set; }
@@ -55,7 +48,7 @@ namespace _360Build
                     ms.Write(BitConverter.GetBytes(BinaryPrimitives.ReverseEndianness(Flags)));
                     ms.Write(BitConverter.GetBytes(BinaryPrimitives.ReverseEndianness(_2BLOffset)));
                     ms.Write(BitConverter.GetBytes(BinaryPrimitives.ReverseEndianness(_6BLOffset)));
-                    ms.Write(Copyright_Info);
+                    ms.Write(CopyrightInfo);
                     ms.Write(new byte[0x10]);
                     ms.Write(BitConverter.GetBytes(BinaryPrimitives.ReverseEndianness(KVLength)));
                     ms.Write(BitConverter.GetBytes(BinaryPrimitives.ReverseEndianness(_6BLOffset2)));
@@ -81,7 +74,7 @@ namespace _360Build
         public List<Bootloader> Bootloaders = new List<Bootloader>();
 
 
-        public XboxROM() { }
+        public XboxROM() {}
 
         public XboxROM(string path, string cpukey)
         {
@@ -134,7 +127,7 @@ namespace _360Build
             Header.Length = Data.Length;
             Header._2BLOffset = Utils.GetInt(Data, 0x8, 4);
             Header._6BLOffset = Utils.GetInt(Data, 0xC, 4);
-            Header.Copyright_Info = Utils.GetBytes(Data, 0x10, 0x40);
+            Header.CopyrightInfo = Utils.GetBytes(Data, 0x10, 0x40);
             Header.KVLength = Utils.GetInt(Data, 0x60, 4);
             Header._6BLOffset2 = Utils.GetInt(Data, 0x64, 4);
             Header.NumOfPatchslots = (ushort)Utils.GetInt(Data, 0x68, 2);
@@ -148,7 +141,8 @@ namespace _360Build
             PrintInfo($"Loading XboxROM. Version: {Header.Version}");
 
             PrintDebug($"Header Information:");
-            PrintDebug($"Magic: {Utils.ByteArrayToString(BitConverter.GetBytes(BinaryPrimitives.ReverseEndianness(Header.Magic)))}");
+            PrintDebug(
+                $"Magic: {Utils.ByteArrayToString(BitConverter.GetBytes(BinaryPrimitives.ReverseEndianness(Header.Magic)))}");
             PrintDebug($"Build Version: 2.0.{Header.Version}");
             PrintDebug($"QFE: {Header.QFE}");
             PrintDebug($"Flags: {Header.Flags}");
@@ -175,10 +169,12 @@ namespace _360Build
             //SMC Load and Decryption
             _SMC = new SMC(Data, Header.SMCOffset, Header.SMCLength);
             _SMC.Decrypt();
-            PrintInfo($"SMC Firmware Found: Version: {_SMC.VersionMajor}.{_SMC.VersionMinor.ToString("D2")}. Decrypting...");
+            PrintInfo(
+                $"SMC Firmware Found: Version: {_SMC.VersionMajor}.{_SMC.VersionMinor.ToString("D2")}. Decrypting...");
 
             LoadBootloaders();
         }
+
         private void LoadBootloaders()
         {
             Bootloaders = new List<Bootloader>();
@@ -212,7 +208,6 @@ namespace _360Build
 
             foreach (var (i, bl) in Bootloaders.Select((bldr, idx) => (idx, bldr)))
             {
-
                 PrintInfo($"Bootloader found: {bl.Type} {bl.Version}. Decrypting...");
 
                 if (i != 0)
@@ -238,9 +233,13 @@ namespace _360Build
 
     internal class XboxUpdateROM : XboxROM
     {
-        public XboxUpdateROM() { }
+        public XboxUpdateROM()
+        {
+        }
 
-        public XboxUpdateROM(string path) : base(path) { }
+        public XboxUpdateROM(string path) : base(path)
+        {
+        }
 
         public void Build(string outputPath)
         {
@@ -262,7 +261,6 @@ namespace _360Build
 
                 foreach (var (i, bl) in Bootloaders.Select((bldr, idx) => (idx, bldr)))
                 {
-
                     if (i != 0)
                     {
                         if ((i == 1) && bl.Type == Bootloader.BootloaderType.CB)
@@ -302,9 +300,13 @@ namespace _360Build
 
     internal class XboxNANDImage : XboxROM
     {
-        public XboxNANDImage() { }
+        public XboxNANDImage()
+        {
+        }
 
-        public XboxNANDImage(string path, string cpukey) : base(path, cpukey) { }
+        public XboxNANDImage(string path, string cpukey) : base(path, cpukey)
+        {
+        }
 
         public void Build(string outputPath)
         {

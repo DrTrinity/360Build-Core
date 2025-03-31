@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RC4Cryptography
+namespace _360Build.Classes
 {
     public static class RC4
     {
