@@ -1,6 +1,6 @@
 namespace _360Build_Core.Classes;
 
-internal class Keyvault
+public class Keyvault
 {
     public byte[] Data
     {
@@ -35,28 +35,21 @@ internal class Keyvault
 
     public static Keyvault CreateFromFile(string path)
     {
-        byte[] kv_raw = File.ReadAllBytes(path);
-        Keyvault kv = new Keyvault(kv_raw, 0, kv_raw.Length);
+        byte[] kvRaw = File.ReadAllBytes(path);
+        Keyvault kv = new Keyvault(kvRaw, 0, kvRaw.Length);
         kv.IsEncrypted = false;
         return kv;
     }
 
     public void Dump(string path)
     {
-        try
-        {
-            File.WriteAllBytes(path, Data);
-        }
-        catch (Exception ex)
-        {
-            //PrintError($"Error dumping SMC to {path}: {ex.Message}");
-            throw;
-        }
+        File.WriteAllBytes(path, Data);
     }
 
     public void Encrypt(byte[] cpuKey)
     {
         if (IsEncrypted) return;
+        Utils.ValidateCPUKey(cpuKey);
 
         Salt = Utils.GenerateSalt();
 
@@ -70,6 +63,7 @@ internal class Keyvault
     public void Decrypt(byte[] cpuKey)
     {
         if (!IsEncrypted) return;
+        Utils.ValidateCPUKey(cpuKey);
 
         Key = Utils.GetHMACKey(cpuKey, Salt);
 

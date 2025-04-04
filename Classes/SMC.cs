@@ -2,7 +2,7 @@
 
 namespace _360Build_Core.Classes
 {
-    internal class SMC
+    public class SMC
     {
         public byte[] Data { get; set; }
         public int Length { get; set; }
@@ -31,15 +31,7 @@ namespace _360Build_Core.Classes
 
         public void Dump(string path)
         {
-            try
-            {
-                File.WriteAllBytes(path, Data);
-            }
-            catch (Exception ex)
-            {
-                //PrintError($"Error dumping SMC to {path}: {ex.Message}");
-                throw;
-            }
+            File.WriteAllBytes(path, Data);
         }
 
         public void Encrypt()

@@ -1,6 +1,8 @@
-﻿namespace _360Build_Core.Classes;
+﻿using _360Build_Core.Exceptions;
 
-internal abstract class Bootloader
+namespace _360Build_Core.Classes;
+
+public abstract class Bootloader
 {
     public enum BootloaderType : ushort
     {
@@ -50,7 +52,6 @@ internal abstract class Bootloader
     public bool IsEncrypted { get; set; }
     public BootloaderType Type { get; set; }
 
-
     public Bootloader(byte[] encData, int offset, bool encrypted = true)
     {
         EntrypointOffset = Utils.GetInt(encData, offset + 0x8, 4);
@@ -71,89 +72,49 @@ internal abstract class Bootloader
 
     public static Bootloader Create(byte[] data, int offset, BootloaderType bootloaderType)
     {
-        try
+        return bootloaderType switch
         {
-            switch (bootloaderType)
-            {
-                case BootloaderType.SB:
-                    return new SBBootloader(data, offset);
-                case BootloaderType.SC:
-                    return new SCBootloader(data, offset);
-                case BootloaderType.SD:
-                    return new SDBootloader(data, offset);
-                case BootloaderType.SE:
-                    return new SEBootloader(data, offset);
-                case BootloaderType.CB:
-                    return new CBBootloader(data, offset);
-                case BootloaderType.CD:
-                    return new CDBootloader(data, offset);
-                case BootloaderType.CE:
-                    return new CEBootloader(data, offset);
-                default:
-                    throw new InvalidOperationException($"Unknown Bootloader Type {bootloaderType}");
-            }
-        }
-        catch (InvalidOperationException ex)
-        {
-            //PrintError(ex.Message);
-            throw;
-        }
+            BootloaderType.SB => new SBBootloader(data, offset),
+            BootloaderType.SC => new SCBootloader(data, offset),
+            BootloaderType.SD => new SDBootloader(data, offset),
+            BootloaderType.SE => new SEBootloader(data, offset),
+            BootloaderType.CB => new CBBootloader(data, offset),
+            BootloaderType.CD => new CDBootloader(data, offset),
+            BootloaderType.CE => new CEBootloader(data, offset),
+            BootloaderType.CF => new CFBootloader(data, offset),
+            BootloaderType.CG => new CGBootloader(data, offset),
+            _ => throw new InvalidBootloaderException($"Unknown Bootloader Type {bootloaderType}")
+        };
     }
 
     public static Bootloader CreateFromFile(string path, BootloaderType bootloaderType)
     {
-        try
-        {
-            var data = File.ReadAllBytes(path);
+        var data = File.ReadAllBytes(path);
 
-            switch (bootloaderType)
-            {
-                case BootloaderType.SB:
-                    return new SBBootloader(data, 0, false);
-                case BootloaderType.SC:
-                    return new SCBootloader(data, 0, false);
-                case BootloaderType.SD:
-                    return new SDBootloader(data, 0, false);
-                case BootloaderType.SE:
-                    return new SEBootloader(data, 0, false);
-                case BootloaderType.CB:
-                    return new CBBootloader(data, 0, false);
-                case BootloaderType.CD:
-                    return new CDBootloader(data, 0, false);
-                case BootloaderType.CE:
-                    return new CEBootloader(data, 0, false);
-                default:
-                    throw new InvalidOperationException($"Unknown Bootloader Type {bootloaderType}");
-            }
-        }
-        catch (FileNotFoundException ex)
+        return bootloaderType switch
         {
-            //PrintError($"File not found at {ex.FileName}");
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            //PrintError(ex.Message);
-            throw;
-        }
+            BootloaderType.SB => new SBBootloader(data, 0, false),
+            BootloaderType.SC => new SCBootloader(data, 0, false),
+            BootloaderType.SD => new SDBootloader(data, 0, false),
+            BootloaderType.SE => new SEBootloader(data, 0, false),
+            BootloaderType.CB => new CBBootloader(data, 0, false),
+            BootloaderType.CD => new CDBootloader(data, 0, false),
+            BootloaderType.CE => new CEBootloader(data, 0, false),
+            BootloaderType.CF => new CFBootloader(data, 0, false),
+            BootloaderType.CG => new CGBootloader(data, 0, false),
+            _ => throw new InvalidBootloaderException($"Unknown Bootloader Type {bootloaderType}")
+        };
     }
 
     public void Dump(string path)
     {
-        try
-        {
-            File.WriteAllBytes(path, Data);
-        }
-        catch (Exception ex)
-        {
-            //PrintError($"Error dumping bootloader {Type} {Version} to {path}: {ex.Message}");
-            throw;
-        }
+        File.WriteAllBytes(path, Data);
     }
 
     public void Encrypt(Bootloader prevBL = null, byte[] cpuKey = null)
     {
         if (IsEncrypted) return;
+        if (cpuKey != null) Utils.ValidateCPUKey(cpuKey);
 
         var _prevKey = prevBL != null ? prevBL.Key : Globals._1BLKey;
         Salt = Utils.GenerateSalt();
@@ -161,6 +122,7 @@ internal abstract class Bootloader
 
         if (prevBL != null && prevBL.Type == BootloaderType.CB && Type == BootloaderType.CB)
         {
+            if (cpuKey == null) throw new InvalidCPUKeyException("No CPU key provided to decrypt CB");
             _salt = Utils.ConcatByteArrays(_salt, cpuKey);
 
             //New CB Encryption Scheme
@@ -192,18 +154,22 @@ internal abstract class Bootloader
     public void Decrypt(Bootloader prevBL = null, byte[] cpuKey = null)
     {
         if (!IsEncrypted) return;
-
+        if (cpuKey != null) Utils.ValidateCPUKey(cpuKey);
+            
         var _salt = Salt;
         var _prevKey = prevBL != null ? prevBL.Key : Globals._1BLKey;
 
         if (prevBL != null && prevBL.Type == BootloaderType.CB && Type == BootloaderType.CB)
         {
+            Logger.LogDebug("CB is split");
+            if (cpuKey == null) throw new InvalidCPUKeyException("No CPU key provided to decrypt CB");
+            
             _salt = Utils.ConcatByteArrays(_salt, cpuKey);
 
             //New CB Encryption Scheme
             if ((Utils.GetInt(Data, 0x6, 2) & 0x1000) != 0)
             {
-                //PrintDebug("CB is using v2 encryption scheme");
+                Logger.LogDebug("CB is using v2 encryption scheme");
                 var _2BLHeader = prevBL.Header;
                 _2BLHeader[0x6] = 0x00;
                 _2BLHeader[0x7] = 0x00;
@@ -289,7 +255,7 @@ internal class SEBootloader : Bootloader
 
         if (_bytesToPad != 0)
         {
-            //PrintDebug("Padding SE...");
+            Logger.LogDebug("Padding SE...");
             _EncodedData = Utils.GetBytes(encData, offset + Header.Length + 0x10,
                 Length - Header.Length - 0x10 + (0x10 - _bytesToPad));
         }
@@ -313,6 +279,20 @@ internal class CDBootloader : Bootloader
 internal class CEBootloader : Bootloader
 {
     public CEBootloader(byte[] encData, int offset, bool encrypted = true) : base(encData, offset, encrypted)
+    {
+    }
+}
+
+internal class CFBootloader : Bootloader
+{
+    public CFBootloader(byte[] encData, int offset, bool encrypted = true) : base(encData, offset, encrypted)
+    {
+    }
+}
+
+internal class CGBootloader : Bootloader
+{
+    public CGBootloader(byte[] encData, int offset, bool encrypted = true) : base(encData, offset, encrypted)
     {
     }
 }

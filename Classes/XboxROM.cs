@@ -2,17 +2,17 @@
 
 namespace _360Build_Core.Classes
 {
-    internal class XboxROM
+    public class XboxROM
     {
-        internal static class BlockSize
+        public static class BlockSize
         {
             public const int SMALL = 0x1000;
             public const int BIG = 0x20000;
         }
 
-        internal class XboxROMHeader
+        public class XboxROMHeader
         {
-            public int Length { get; set; }
+            public int ROMLength { get; set; }
 
             public ushort Magic { get; set; }
             public ushort Version { get; set; }
@@ -60,56 +60,40 @@ namespace _360Build_Core.Classes
             }
         }
 
-
         public byte[] CPUKey { get; set; }
         public byte[] Data { get; set; }
 
+        public ECC _ECC = new ECC();
         public XboxROMHeader Header = new XboxROMHeader();
         public SMC _SMC; //SMC Firmware
         public List<Bootloader> Bootloaders = new List<Bootloader>();
-
 
         public XboxROM() {}
 
         public XboxROM(string path, string cpukey)
         {
-            try
-            {
-                CPUKey = Utils.StringToByteArray(cpukey);
-                Data = File.ReadAllBytes(path);
-            }
-            catch (FileNotFoundException ex)
-            {
-                //PrintError($"File not found at {ex.FileName}");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                //PrintError($"Error reading in file: {ex.Message}");
-                throw;
-            }
-
+            CPUKey = Utils.StringToByteArray(cpukey); 
+            Utils.ValidateCPUKey(CPUKey);
+            Data = File.ReadAllBytes(path);
             Load();
         }
 
         public XboxROM(string path)
         {
-            try
-            {
-                Data = File.ReadAllBytes(path);
-            }
-            catch (FileNotFoundException ex)
-            {
-                //PrintError($"File not found at {ex.FileName}");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                //PrintError($"Error reading in file: {ex.Message}");
-                throw;
-            }
-
+            Data = File.ReadAllBytes(path);
             Load();
+        }
+        
+        public static XboxROM CreateFromFile(string path, string? cpuKey = null)
+        {
+            var data = File.ReadAllBytes(path);
+
+            if (data.Length == Utils.GetInt(data, 0xC, 4)) 
+                return new XboxUpdateROM(path);
+        
+            return cpuKey != null
+                ? new XboxNANDImage(path, cpuKey)
+                : new XboxNANDImage(path);
         }
 
         private void Load()
@@ -119,7 +103,7 @@ namespace _360Build_Core.Classes
             Header.Version = (ushort)Utils.GetInt(Data, 0x2, 2);
             Header.QFE = (ushort)Utils.GetInt(Data, 0x4, 2);
             Header.Flags = (ushort)Utils.GetInt(Data, 0x6, 2);
-            Header.Length = Data.Length;
+            Header.ROMLength = Data.Length;
             Header._2BLOffset = Utils.GetInt(Data, 0x8, 4);
             Header._6BLOffset = Utils.GetInt(Data, 0xC, 4);
             Header.CopyrightInfo = Utils.GetBytes(Data, 0x10, 0x40);
@@ -133,38 +117,45 @@ namespace _360Build_Core.Classes
             Header.SMCOffset = Utils.GetInt(Data, 0x7C, 4);
             Header.SMCLength = Utils.GetInt(Data, 0x78, 4);
 
-            // PrintInfo($"Loading XboxROM. Version: {Header.Version}");
-            //
-            // PrintDebug($"Header Information:");
-            // PrintDebug(
-            //     $"Magic: {Utils.ByteArrayToString(BitConverter.GetBytes(BinaryPrimitives.ReverseEndianness(Header.Magic)))}");
-            // PrintDebug($"Build Version: 2.0.{Header.Version}");
-            // PrintDebug($"QFE: {Header.QFE}");
-            // PrintDebug($"Flags: {Header.Flags}");
-            // PrintDebug($"2BL Offset: 0x{Header._2BLOffset:X}");
-            // PrintDebug($"6BL Offset: 0x{Header._6BLOffset:X}");
-            // PrintDebug($"Patchslots: {Header.NumOfPatchslots}");
-            // PrintDebug($"Patchslot Size: 0x{Header.PatchslotSize:X}");
-            // PrintDebug($"KV Version: 0x{Header.KVVersion:X}");
-            // PrintDebug($"KV Offset: 0x{Header.KVOffset:X}");
-            // PrintDebug($"KV Length: 0x{Header.KVLength:X}");
-            // PrintDebug($"SMC Offset: 0x{Header.SMCOffset:X}");
-            // PrintDebug($"SMC Length: 0x{Header.SMCLength:X}");
-            // PrintDebug($"SMC Config Offset: 0x{Header.SMCConfigOffset:X}");
+            Logger.LogInfo($"Loading XboxROM. Version: {Header.Version}");
+            
+            Logger.LogDebug($"Header Information:");
+            Logger.LogDebug(
+                $"Magic: {Utils.ByteArrayToString(BitConverter.GetBytes(BinaryPrimitives.ReverseEndianness(Header.Magic)))}");
+            Logger.LogDebug($"Build Version: 2.0.{Header.Version}");
+            Logger.LogDebug($"QFE: {Header.QFE}");
+            Logger.LogDebug($"Flags: {Header.Flags}");
+            Logger.LogDebug($"2BL Offset: 0x{Header._2BLOffset:X}");
+            Logger.LogDebug($"6BL Offset: 0x{Header._6BLOffset:X}");
+            Logger.LogDebug($"Patchslots: {Header.NumOfPatchslots}");
+            Logger.LogDebug($"Patchslot Size: 0x{Header.PatchslotSize:X}");
+            Logger.LogDebug($"KV Version: 0x{Header.KVVersion:X}");
+            Logger.LogDebug($"KV Offset: 0x{Header.KVOffset:X}");
+            Logger.LogDebug($"KV Length: 0x{Header.KVLength:X}");
+            Logger.LogDebug($"SMC Offset: 0x{Header.SMCOffset:X}");
+            Logger.LogDebug($"SMC Length: 0x{Header.SMCLength:X}");
+            Logger.LogDebug($"SMC Config Offset: 0x{Header.SMCConfigOffset:X}");
 
             if (Header.QFE != 0)
             {
-                //PrintDebug($"QFE populated. ROM seems to be non-retail");
+                Logger.LogDebug($"QFE populated. ROM seems to be non-retail");
             }
-
+            
             //Strip ECC
-            //PrintInfo("Stripping ECC data...");
-            Data = Utils.UnEcc(Data);
+            if (ECC.GetSpareDataType(Data) != ECC.SpareDataType.NONE)
+            {
+                Logger.LogDebug("ECC spare data found. Stripping...");
+                Logger.LogDebug($"Spare data type is {ECC.GetSpareDataType(Data)}.");
+                
+                _ECC.LoadSpareData(Data);
+                
+                Data = ECC.UnEcc(Data);
+            }
 
             //SMC Load and Decryption
             _SMC = new SMC(Data, Header.SMCOffset, Header.SMCLength);
             _SMC.Decrypt();
-            //PrintInfo($"SMC Firmware Found: Version: {_SMC.VersionMajor}.{_SMC.VersionMinor.ToString("D2")}. Decrypting...");
+            Logger.LogDebug($"SMC Firmware Found: Version: {_SMC.VersionMajor}.{_SMC.VersionMinor:D2}. Decrypting...");
 
             LoadBootloaders();
         }
@@ -191,18 +182,9 @@ namespace _360Build_Core.Classes
             //     offset += bl.Length;
             // }
 
-            // offset = Header._6BLOffset + Header.PatchslotSize;
-            // while (Enum.IsDefined(typeof(Bootloader.BootloaderType), (ushort)Utils.GetInt(Data, offset, 2)))
-            // {
-            //     Bootloader.BootloaderType blType = (Bootloader.BootloaderType)Utils.GetInt(Data, offset, 2);
-            //     Bootloader bl = Bootloader.Create(Data, offset, blType);
-            //     Bootloaders.Add(bl);
-            //     offset += bl.Length;
-            // }
-
             foreach (var (i, bl) in Bootloaders.Select((bldr, idx) => (idx, bldr)))
             {
-                //PrintInfo($"Bootloader found: {bl.Type} {bl.Version}. Decrypting...");
+                Logger.LogDebug($"Bootloader found: {bl.Type} {bl.Version}. Decrypting...");
 
                 if (i != 0)
                 {
@@ -225,7 +207,7 @@ namespace _360Build_Core.Classes
         }
     }
 
-    internal class XboxUpdateROM : XboxROM
+    public class XboxUpdateROM : XboxROM
     {
         public XboxUpdateROM()
         {
@@ -237,62 +219,50 @@ namespace _360Build_Core.Classes
 
         public void Build(string outputPath)
         {
-            //PrintInfo("Building Xbox Update ROM...");
+            using FileStream fs = new(outputPath, FileMode.Create, FileAccess.Write, FileShare.None);
 
-            try
+            fs.Write(Header.Data);
+            fs.Write(new byte[Header.SMCOffset - fs.Length]);
+
+            _SMC.Encrypt();
+            fs.Write(_SMC.Data);
+
+            fs.Write(new byte[Header._2BLOffset - fs.Length]);
+
+            foreach (var (i, bl) in Bootloaders.Select((bldr, idx) => (idx, bldr)))
             {
-                using FileStream fs = new(outputPath, FileMode.Create, FileAccess.Write, FileShare.None);
-
-                fs.Write(Header.Data);
-
-                fs.Write(new byte[Header.SMCOffset - fs.Length]);
-
-                _SMC.Encrypt();
-                fs.Write(_SMC.Data);
-
-                fs.Write(new byte[Header._2BLOffset - fs.Length]);
-
-
-                foreach (var (i, bl) in Bootloaders.Select((bldr, idx) => (idx, bldr)))
+                if (i != 0)
                 {
-                    if (i != 0)
+                    if ((i == 1) && bl.Type == Bootloader.BootloaderType.CB)
                     {
-                        if ((i == 1) && bl.Type == Bootloader.BootloaderType.CB)
-                        {
-                            bl.Encrypt(Bootloaders[i - 1], CPUKey);
-                        }
-                        else if (bl.Type == Bootloader.BootloaderType.CF)
-                            bl.Encrypt(null, CPUKey);
-                        else
-                        {
-                            bl.Encrypt(Bootloaders[i - 1]);
-                        }
+                        bl.Encrypt(Bootloaders[i - 1], CPUKey);
+                    }
+                    else if (bl.Type == Bootloader.BootloaderType.CF)
+                    {
+                        bl.Encrypt(null, CPUKey);
                     }
                     else
                     {
-                        bl.Encrypt();
+                        bl.Encrypt(Bootloaders[i - 1]);
                     }
-
-                    fs.Write(bl.Data);
                 }
-
-                int bytesToPad = (int)(fs.Length % BlockSize.SMALL);
-                if (bytesToPad != 0)
+                else
                 {
-                    //PrintDebug("Padding ROM to nearest block");
-                    fs.Write(new byte[BlockSize.SMALL - bytesToPad]);
+                    bl.Encrypt();
                 }
 
-                //PrintSuccess($"ROM successfully built: {outputPath}");
+                fs.Write(bl.Data);
             }
-            catch (Exception ex)
+
+            int bytesToPad = (int)(fs.Length % BlockSize.SMALL);
+            if (bytesToPad != 0)
             {
-                //PrintError($"Error building ROM: {ex.Message}");
+                fs.Write(new byte[BlockSize.SMALL - bytesToPad]);
             }
         }
     }
 
-    internal class XboxNANDImage : XboxROM
+    public class XboxNANDImage : XboxROM
     {
         public XboxNANDImage()
         {
@@ -300,11 +270,17 @@ namespace _360Build_Core.Classes
 
         public XboxNANDImage(string path, string cpukey) : base(path, cpukey)
         {
+            
+        }
+        
+        public XboxNANDImage(string path) : base(path)
+        {
+            
         }
 
         public void Build(string outputPath)
         {
-            //PrintInfo("Building Xbox NAND Image...");
+            Logger.LogInfo("Building Xbox NAND Image...");
         }
     }
 }
