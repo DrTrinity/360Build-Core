@@ -6,9 +6,9 @@ public class Keyvault
     {
         get
         {
-            if (IsEncrypted) return Utils.ConcatByteArrays(Salt, _EncodedData);
+            if (IsEncrypted) return Utils.ConcatByteArrays(Salt, EncodedData);
 
-            return Utils.ConcatByteArrays(Key, _DecodedData);
+            return Utils.ConcatByteArrays(Key, DecodedData);
         }
     }
 
@@ -16,8 +16,8 @@ public class Keyvault
     public byte[]? Salt { get; set; }
     public byte[]? Key { get; set; }
 
-    protected byte[]? _EncodedData { get; set; }
-    protected byte[]? _DecodedData { get; set; }
+    protected byte[]? EncodedData { get; set; }
+    protected byte[]? DecodedData { get; set; }
     public bool IsEncrypted { get; set; }
 
     public Keyvault(byte[]? encData, int offset, int length)
@@ -28,9 +28,9 @@ public class Keyvault
         IsEncrypted = true;
 
         if (IsEncrypted)
-            _EncodedData = Utils.GetBytes(encData, offset + 0x10, Length - 0x10);
+            EncodedData = Utils.GetBytes(encData, offset + 0x10, Length - 0x10);
         else
-            _DecodedData = Utils.GetBytes(encData, offset + 0x10, Length - 0x10);
+            DecodedData = Utils.GetBytes(encData, offset + 0x10, Length - 0x10);
     }
 
     public static Keyvault CreateFromFile(string path)
@@ -54,13 +54,13 @@ public class Keyvault
             return;
         }
         
-        Utils.ValidateCPUKey(cpuKey);
+        Utils.ValidateCpuKey(cpuKey);
 
         Salt = Utils.GenerateSalt();
 
-        Key = Utils.GetHMACKey(cpuKey, Salt);
+        Key = Utils.GetHmacKey(cpuKey, Salt);
 
-        _EncodedData = RC4.Apply(_DecodedData, Key);
+        EncodedData = Rc4.Apply(DecodedData, Key);
 
         IsEncrypted = true;
     }
@@ -73,11 +73,11 @@ public class Keyvault
             return;
         }
         
-        Utils.ValidateCPUKey(cpuKey);
+        Utils.ValidateCpuKey(cpuKey);
 
-        Key = Utils.GetHMACKey(cpuKey, Salt);
+        Key = Utils.GetHmacKey(cpuKey, Salt);
 
-        _DecodedData = RC4.Apply(_EncodedData, Key);
+        DecodedData = Rc4.Apply(EncodedData, Key);
 
         IsEncrypted = false;
     }

@@ -1,6 +1,6 @@
 ﻿namespace _360Build_Core.Classes
 {
-    public static class RC4
+    public static class Rc4
     {
         /// <summary>
         ///     Give data and an encryption key, apply RC4 cryptography.  RC4 is symmetric,
@@ -23,10 +23,10 @@
             //  Key Scheduling Algorithm Phase:
             //  KSA Phase Step 1: First, the entries of S are set equal to the values of 0 to 255 
             //                    in ascending order.
-            int[] S = new int[256];
+            int[] s = new int[256];
             for (int _ = 0; _ < 256; _++)
             {
-                S[_] = _;
+                s[_] = _;
             }
 
             //  KSA Phase Step 2a: Next, a temporary vector T is created.
@@ -55,12 +55,12 @@
             {
                 //  increment j by the sum of S[i] and T[i], however keeping it within the 
                 //  range of 0 to 255 using mod (%) division.
-                j = (j + S[i] + T[i]) % 256;
+                j = (j + s[i] + T[i]) % 256;
 
                 //  Swap the values of S[i] and S[j]
-                int temp = S[i];
-                S[i] = S[j];
-                S[j] = temp;
+                int temp = s[i];
+                s[i] = s[j];
+                s[j] = temp;
             }
 
 
@@ -77,21 +77,21 @@
 
                 //  PRGA Phase Step 2. Lookup the i'th element of S and add it to j, keeping the
                 //                     result within the range of 0 to 255 using mod (%) division
-                j = (j + S[i]) % 256;
+                j = (j + s[i]) % 256;
 
                 //  PRGA Phase Step 3. Swap the values of S[i] and S[j]
-                int temp = S[i];
-                S[i] = S[j];
-                S[j] = temp;
+                int temp = s[i];
+                s[i] = s[j];
+                s[j] = temp;
 
                 //  PRGA Phase Step 4. Use the result of the sum of S[i] and S[j], mod (%) by 256, 
                 //                     to get the index of S that handls the value of the stream value K.
-                int K = S[(S[i] + S[j]) % 256];
+                int k = s[(s[i] + s[j]) % 256];
 
                 //  PRGA Phase Step 5. Use bitwise exclusive OR (^) with the next byte in the data to
                 //                     produce  the next byte of the resulting ciphertext (when 
                 //                     encrypting) or plaintext (when decrypting)
-                result[iteration] = Convert.ToByte(data[iteration] ^ K);
+                result[iteration] = Convert.ToByte(data[iteration] ^ k);
             }
 
             //  return the result

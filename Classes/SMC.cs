@@ -2,7 +2,7 @@
 
 namespace _360Build_Core.Classes
 {
-    public class SMC
+    public class Smc
     {
         public byte[]? Data { get; set; }
         public int Length { get; set; }
@@ -11,7 +11,7 @@ namespace _360Build_Core.Classes
         public byte[]? CopyrightInfo => Utils.GetBytes(Data, 0x108, 0x22);
         public bool IsEncrypted { get; set; }
 
-        public SMC(byte[]? encData, int offset, int length)
+        public Smc(byte[]? encData, int offset, int length)
         {
             Data = Utils.GetBytes(encData, offset, length);
             Length = length;
@@ -19,10 +19,10 @@ namespace _360Build_Core.Classes
             IsEncrypted = GetEncryptionStatus();
         }
 
-        public static SMC CreateFromFile(string path)
+        public static Smc CreateFromFile(string path)
         {
             byte[]? smcRaw = File.ReadAllBytes(path);
-            SMC smc = new SMC(smcRaw, 0, smcRaw.Length);
+            Smc smc = new Smc(smcRaw, 0, smcRaw.Length);
             smc.IsEncrypted = false;
             return smc;
         }
@@ -40,16 +40,16 @@ namespace _360Build_Core.Classes
                 return;
             }
 
-            int[] Keys = { 0x42, 0x75, 0x4E, 0x79 };
+            int[] keys = { 0x42, 0x75, 0x4E, 0x79 };
             int i = 0;
             int mod;
             byte[]? res = new byte[Length];
             for (i = 0; i < Length; i++)
             {
-                mod = (Data[i] ^ (Keys[i & 3] & 0xFF)) * 0xFB;
-                res[i] = (byte)(Data[i] ^ (Keys[i & 3] & 0xFF));
-                Keys[(i + 1) & 3] += mod;
-                Keys[(i + 2) & 3] += (mod >> 8);
+                mod = (Data[i] ^ (keys[i & 3] & 0xFF)) * 0xFB;
+                res[i] = (byte)(Data[i] ^ (keys[i & 3] & 0xFF));
+                keys[(i + 1) & 3] += mod;
+                keys[(i + 2) & 3] += (mod >> 8);
             }
 
             IsEncrypted = true;
@@ -65,16 +65,16 @@ namespace _360Build_Core.Classes
                 return;
             }
 
-            int[] Keys = { 0x42, 0x75, 0x4E, 0x79 };
+            int[] keys = { 0x42, 0x75, 0x4E, 0x79 };
             int i = 0;
             int mod;
             byte[]? res = new byte[Length];
             for (i = 0; i < Length; i++)
             {
                 mod = (Data[i] * 0xFB);
-                res[i] = (byte)(Data[i] ^ (Keys[i & 3] & 0xFF));
-                Keys[(i + 1) & 3] += mod;
-                Keys[(i + 2) & 3] += (mod >> 8);
+                res[i] = (byte)(Data[i] ^ (keys[i & 3] & 0xFF));
+                keys[(i + 1) & 3] += mod;
+                keys[(i + 2) & 3] += (mod >> 8);
             }
 
             Data = res;

@@ -1,8 +1,8 @@
 namespace _360Build_Core.Classes;
 
-public class ECC
+public class Ecc
 {
-    public List<SpareData> _SpareData { get; set; }
+    public List<SpareData> SpareDatas { get; set; }
     
     public enum SpareDataType
     {
@@ -22,7 +22,7 @@ public class ECC
         public short FsSize { get; set; }
         public byte FsPageCount { get; set; }
         public byte FsBlockType { get; set; }
-        public byte[] EDC { get; set; }
+        public byte[] Edc { get; set; }
         
         public SpareData(byte[]? data)
         {
@@ -33,12 +33,12 @@ public class ECC
 
     internal void LoadSpareData(byte[]? nanddata)
     {
-        _SpareData = new List<SpareData>();
+        SpareDatas = new List<SpareData>();
         int pageCount = nanddata.Length / 0x210;
 
         for (int i = 1; i <= pageCount; i++)
         {
-            _SpareData.Add(new SpareData(Utils.GetBytes(nanddata, (i * 0x210) - 0x10, 0x10)));
+            SpareDatas.Add(new SpareData(Utils.GetBytes(nanddata, (i * 0x210) - 0x10, 0x10)));
         }
     }
 

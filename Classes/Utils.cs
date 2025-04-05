@@ -38,7 +38,7 @@ namespace _360Build_Core.Classes
             return Convert.ToInt32(ByteArrayToString(value), 16);
         }
 
-        public static int ByteArrayToIntBE(byte[]? value)
+        public static int ByteArrayToIntBe(byte[]? value)
         {
             Array.Reverse(value);
             return Convert.ToInt32(ByteArrayToString(value), 16);
@@ -58,21 +58,21 @@ namespace _360Build_Core.Classes
         {
             if (!hex.All("0123456789abcdefABCDEF".Contains)) throw new InvalidDataException("String is not a valid hex string");
             
-            int NumberChars = hex.Length;
-            if (NumberChars % 2 != 0)
+            int numberChars = hex.Length;
+            if (numberChars % 2 != 0)
             {
                 hex = "0" + hex;
-                NumberChars++;
+                numberChars++;
             }
 
-            if (NumberChars % 4 != 0)
+            if (numberChars % 4 != 0)
             {
                 hex = "00" + hex;
-                NumberChars += 2;
+                numberChars += 2;
             }
 
-            byte[]? bytes = new byte[NumberChars / 2];
-            for (int i = 0; i < NumberChars; i += 2)
+            byte[]? bytes = new byte[numberChars / 2];
+            for (int i = 0; i < numberChars; i += 2)
                 bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
             return bytes;
         }
@@ -99,7 +99,7 @@ namespace _360Build_Core.Classes
             return true;
         }
 
-        public static byte[]? GetHMACKey(byte[]? key, byte[]? salt)
+        public static byte[]? GetHmacKey(byte[]? key, byte[]? salt)
         {
             byte[]? hash = new HMACSHA1(key).ComputeHash(salt);
             return Utils.GetBytes(hash, 0, 0x10);
@@ -108,9 +108,9 @@ namespace _360Build_Core.Classes
         public static byte[]? GenerateSalt()
         {
             Random r = new Random();
-            byte[]? _salt = new byte[0x10];
-            r.NextBytes(_salt);
-            return _salt;
+            byte[]? salt = new byte[0x10];
+            r.NextBytes(salt);
+            return salt;
         }
 
         public static bool GetBit(this byte src, int bitNumber)
@@ -118,12 +118,12 @@ namespace _360Build_Core.Classes
             return (src & (1 << bitNumber)) != 0;
         }
 
-        public static void ValidateCPUKey(byte[]? key)
+        public static void ValidateCpuKey(byte[]? key)
         {
-            if (!IsCPUKeyValid(key)) throw new InvalidCPUKeyException();
+            if (!IsCpuKeyValid(key)) throw new InvalidCpuKeyException();
         }
 
-        public static bool IsCPUKeyValid(byte[]? key, bool fixKey = false)
+        public static bool IsCpuKeyValid(byte[]? key, bool fixKey = false)
         {
             if (key.Length != 0x10) return false;
             
@@ -165,7 +165,7 @@ namespace _360Build_Core.Classes
                 return false;
             }
 
-            generatedKey = CalculateCPUKeyECD(key);
+            generatedKey = CalculateCpuKeyEcd(key);
 
             if (fixKey) Array.Copy(generatedKey, key, 16);
 
@@ -173,7 +173,7 @@ namespace _360Build_Core.Classes
             else return true;
         }
         
-        public static byte[] CalculateCPUKeyECD(byte[]? key)
+        public static byte[] CalculateCpuKeyEcd(byte[]? key)
         {
             byte[] ecd = new byte[0x10];
             Buffer.BlockCopy(key, 0, ecd, 0, 0x10); //src, offsetstart, dst, offsetstart, len
