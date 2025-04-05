@@ -14,7 +14,7 @@ public class ECC
 
     public class SpareData
     {
-        public byte[] Data { get; set; }
+        public byte[]? Data { get; set; }
         
         public short BlockId { get; set; }
         public bool BadBlock { get; set; }
@@ -24,14 +24,14 @@ public class ECC
         public byte FsBlockType { get; set; }
         public byte[] EDC { get; set; }
         
-        public SpareData(byte[] data)
+        public SpareData(byte[]? data)
         {
             Data = data;
             BlockId = BitConverter.ToInt16(data, 0);
         }
     }
 
-    internal void LoadSpareData(byte[] nanddata)
+    internal void LoadSpareData(byte[]? nanddata)
     {
         _SpareData = new List<SpareData>();
         int pageCount = nanddata.Length / 0x210;
@@ -42,9 +42,9 @@ public class ECC
         }
     }
 
-    internal static SpareDataType GetSpareDataType(byte[] nanddata)
+    internal static SpareDataType GetSpareDataType(byte[]? nanddata)
     {
-        byte[] spareData = Utils.GetBytes(nanddata, 0x200, 0x10);
+        byte[]? spareData = Utils.GetBytes(nanddata, 0x200, 0x10);
 
         if (spareData[0] == 0xFF)
         {
@@ -129,7 +129,7 @@ public class ECC
         }
     }
 
-    internal static byte[] UnEcc(byte[] data)
+    internal static byte[]? UnEcc(byte[]? data)
     {
         using (var rms = new MemoryStream(data))
         using (var wms = new MemoryStream())

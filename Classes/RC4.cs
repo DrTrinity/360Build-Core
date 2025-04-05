@@ -18,7 +18,7 @@
         /// <returns>
         ///     Byte array representing the encrypted/decrypted data.
         /// </returns>
-        public static byte[] Apply(byte[] data, byte[] key)
+        public static byte[]? Apply(byte[]? data, byte[]? key)
         {
             //  Key Scheduling Algorithm Phase:
             //  KSA Phase Step 1: First, the entries of S are set equal to the values of 0 to 255 
@@ -68,7 +68,7 @@
             //  Once the vector S is initialized from above in the Key Scheduling Algorithm Phase,
             //  the input key is no longer used.  In this phase, for the length of the data, we ...
             i = j = 0;
-            byte[] result = new byte[data.Length];
+            byte[]? result = new byte[data.Length];
             for (int iteration = 0; iteration < data.Length; iteration++)
             {
                 //  PRGA Phase Step 1. Continously increment i from 0 to 255, starting it back 

@@ -6,13 +6,13 @@ namespace _360Build_Core.Classes
 {
     public static class Utils
     {
-        public static byte[] GetBytes(byte[] data, int offset, int length)
+        public static byte[]? GetBytes(byte[]? data, int offset, int length)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
             if (offset < 0 || offset + length > data.Length)
                 throw new InvalidDataException($"Requested {length} bytes at offset {offset}, but data is only {data.Length} bytes long.");
             if (length < 0) length = 0;
-            byte[] templist = new byte[length];
+            byte[]? templist = new byte[length];
 
             if (offset + length > data.Length)
             {
@@ -27,24 +27,24 @@ namespace _360Build_Core.Classes
             return templist;
         }
 
-        public static int GetInt(byte[] data, int offset, int length)
+        public static int GetInt(byte[]? data, int offset, int length)
         {
-            byte[] bytes = GetBytes(data, offset, length);
+            byte[]? bytes = GetBytes(data, offset, length);
             return Convert.ToInt32(ByteArrayToString(bytes), 16);
         }
 
-        public static int ByteArrayToInt(byte[] value)
+        public static int ByteArrayToInt(byte[]? value)
         {
             return Convert.ToInt32(ByteArrayToString(value), 16);
         }
 
-        public static int ByteArrayToIntBE(byte[] value)
+        public static int ByteArrayToIntBE(byte[]? value)
         {
             Array.Reverse(value);
             return Convert.ToInt32(ByteArrayToString(value), 16);
         }
 
-        public static string ByteArrayToString(byte[] ba, int startindex = 0, int length = 0)
+        public static string ByteArrayToString(byte[]? ba, int startindex = 0, int length = 0)
         {
             if (ba == null) return "";
             string hex = BitConverter.ToString(ba);
@@ -54,7 +54,7 @@ namespace _360Build_Core.Classes
             return hex.Replace("-", "");
         }
 
-        public static byte[] StringToByteArray(String hex)
+        public static byte[]? StringToByteArray(String hex)
         {
             if (!hex.All("0123456789abcdefABCDEF".Contains)) throw new InvalidDataException("String is not a valid hex string");
             
@@ -71,18 +71,18 @@ namespace _360Build_Core.Classes
                 NumberChars += 2;
             }
 
-            byte[] bytes = new byte[NumberChars / 2];
+            byte[]? bytes = new byte[NumberChars / 2];
             for (int i = 0; i < NumberChars; i += 2)
                 bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
             return bytes;
         }
 
-        public static byte[] ConcatByteArrays(params byte[][] arrays)
+        public static byte[]? ConcatByteArrays(params byte[]?[] arrays)
         {
             return arrays.SelectMany(x => x).ToArray();
         }
         
-        public static bool ByteArrayCompare(byte[] a1, byte[] a2, int size = 0)
+        public static bool ByteArrayCompare(byte[]? a1, byte[] a2, int size = 0)
         {
             if (a1 == null || a2 == null) return false;
             if (size == 0)
@@ -99,16 +99,16 @@ namespace _360Build_Core.Classes
             return true;
         }
 
-        public static byte[] GetHMACKey(byte[] key, byte[] salt)
+        public static byte[]? GetHMACKey(byte[]? key, byte[]? salt)
         {
-            byte[] hash = new HMACSHA1(key).ComputeHash(salt);
+            byte[]? hash = new HMACSHA1(key).ComputeHash(salt);
             return Utils.GetBytes(hash, 0, 0x10);
         }
 
-        public static byte[] GenerateSalt()
+        public static byte[]? GenerateSalt()
         {
             Random r = new Random();
-            byte[] _salt = new byte[0x10];
+            byte[]? _salt = new byte[0x10];
             r.NextBytes(_salt);
             return _salt;
         }
@@ -118,12 +118,12 @@ namespace _360Build_Core.Classes
             return (src & (1 << bitNumber)) != 0;
         }
 
-        public static void ValidateCPUKey(byte[] key)
+        public static void ValidateCPUKey(byte[]? key)
         {
             if (!IsCPUKeyValid(key)) throw new InvalidCPUKeyException();
         }
 
-        public static bool IsCPUKeyValid(byte[] key, bool fixKey = false)
+        public static bool IsCPUKeyValid(byte[]? key, bool fixKey = false)
         {
             if (key.Length != 0x10) return false;
             
@@ -173,7 +173,7 @@ namespace _360Build_Core.Classes
             else return true;
         }
         
-        public static byte[] CalculateCPUKeyECD(byte[] key)
+        public static byte[] CalculateCPUKeyECD(byte[]? key)
         {
             byte[] ecd = new byte[0x10];
             Buffer.BlockCopy(key, 0, ecd, 0, 0x10); //src, offsetstart, dst, offsetstart, len

@@ -4,16 +4,14 @@ namespace _360Build_Core.Classes
 {
     public class SMC
     {
-        public byte[] Data { get; set; }
+        public byte[]? Data { get; set; }
         public int Length { get; set; }
         public byte VersionMajor { get; set; }
         public byte VersionMinor { get; set; }
-        public byte[] CopyrightInfo => Utils.GetBytes(Data, 0x108, 0x22);
-
+        public byte[]? CopyrightInfo => Utils.GetBytes(Data, 0x108, 0x22);
         public bool IsEncrypted { get; set; }
 
-
-        public SMC(byte[] encData, int offset, int length)
+        public SMC(byte[]? encData, int offset, int length)
         {
             Data = Utils.GetBytes(encData, offset, length);
             Length = length;
@@ -23,7 +21,7 @@ namespace _360Build_Core.Classes
 
         public static SMC CreateFromFile(string path)
         {
-            byte[] smcRaw = File.ReadAllBytes(path);
+            byte[]? smcRaw = File.ReadAllBytes(path);
             SMC smc = new SMC(smcRaw, 0, smcRaw.Length);
             smc.IsEncrypted = false;
             return smc;
@@ -36,12 +34,16 @@ namespace _360Build_Core.Classes
 
         public void Encrypt()
         {
-            if (IsEncrypted) return;
+            if (IsEncrypted)
+            {
+                Logger.LogDebug("SMC is already encrypted. Skipping...");
+                return;
+            }
 
             int[] Keys = { 0x42, 0x75, 0x4E, 0x79 };
             int i = 0;
             int mod;
-            byte[] res = new byte[Length];
+            byte[]? res = new byte[Length];
             for (i = 0; i < Length; i++)
             {
                 mod = (Data[i] ^ (Keys[i & 3] & 0xFF)) * 0xFB;
@@ -57,12 +59,16 @@ namespace _360Build_Core.Classes
 
         public void Decrypt()
         {
-            if (!IsEncrypted) return;
+            if (!IsEncrypted)
+            {
+                Logger.LogDebug("SMC is already decrypted. Skipping...");
+                return;
+            }
 
             int[] Keys = { 0x42, 0x75, 0x4E, 0x79 };
             int i = 0;
             int mod;
-            byte[] res = new byte[Length];
+            byte[]? res = new byte[Length];
             for (i = 0; i < Length; i++)
             {
                 mod = (Data[i] * 0xFB);

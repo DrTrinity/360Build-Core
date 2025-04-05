@@ -20,7 +20,7 @@ namespace _360Build_Core.Classes
             public ushort Flags { get; set; }
             public int _2BLOffset { get; set; }
             public int _6BLOffset { get; set; }
-            public byte[] CopyrightInfo { get; set; }
+            public byte[]? CopyrightInfo { get; set; }
             public int KVLength { get; set; }
             public int _6BLOffset2 { get; set; }
             public ushort NumOfPatchslots { get; set; }
@@ -60,17 +60,17 @@ namespace _360Build_Core.Classes
             }
         }
 
-        public byte[] CPUKey { get; set; }
-        public byte[] Data { get; set; }
+        public byte[]? CPUKey { get; set; }
+        public byte[]? Data { get; set; }
 
         public ECC _ECC = new ECC();
         public XboxROMHeader Header = new XboxROMHeader();
         public SMC _SMC; //SMC Firmware
         public List<Bootloader> Bootloaders = new List<Bootloader>();
 
-        public XboxROM() {}
-
-        public XboxROM(string path, string cpukey)
+        protected XboxROM() {}
+        
+        protected XboxROM(string path, string cpukey)
         {
             CPUKey = Utils.StringToByteArray(cpukey); 
             Utils.ValidateCPUKey(CPUKey);
@@ -78,7 +78,7 @@ namespace _360Build_Core.Classes
             Load();
         }
 
-        public XboxROM(string path)
+        protected XboxROM(string path)
         {
             Data = File.ReadAllBytes(path);
             Load();
@@ -127,7 +127,7 @@ namespace _360Build_Core.Classes
             Logger.LogDebug($"Flags: {Header.Flags}");
             Logger.LogDebug($"2BL Offset: 0x{Header._2BLOffset:X}");
             Logger.LogDebug($"6BL Offset: 0x{Header._6BLOffset:X}");
-            Logger.LogDebug($"Patchslots: {Header.NumOfPatchslots}");
+            Logger.LogDebug($"Patchslot Count: {Header.NumOfPatchslots}");
             Logger.LogDebug($"Patchslot Size: 0x{Header.PatchslotSize:X}");
             Logger.LogDebug($"KV Version: 0x{Header.KVVersion:X}");
             Logger.LogDebug($"KV Offset: 0x{Header.KVOffset:X}");
