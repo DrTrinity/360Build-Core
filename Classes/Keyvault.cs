@@ -2,6 +2,19 @@ namespace _360Build_Core.Classes;
 
 public class Keyvault
 {
+    public Keyvault(byte[]? encData, int offset, int length)
+    {
+        Length = length;
+        Salt = Utils.GetBytes(encData, offset, 0x10);
+
+        IsEncrypted = true;
+
+        if (IsEncrypted)
+            EncodedData = Utils.GetBytes(encData, offset + 0x10, Length - 0x10);
+        else
+            DecodedData = Utils.GetBytes(encData, offset + 0x10, Length - 0x10);
+    }
+
     public byte[]? Data
     {
         get
@@ -20,23 +33,10 @@ public class Keyvault
     protected byte[]? DecodedData { get; set; }
     public bool IsEncrypted { get; set; }
 
-    public Keyvault(byte[]? encData, int offset, int length)
-    {
-        Length = length;
-        Salt = Utils.GetBytes(encData, offset, 0x10);
-
-        IsEncrypted = true;
-
-        if (IsEncrypted)
-            EncodedData = Utils.GetBytes(encData, offset + 0x10, Length - 0x10);
-        else
-            DecodedData = Utils.GetBytes(encData, offset + 0x10, Length - 0x10);
-    }
-
     public static Keyvault CreateFromFile(string path)
     {
-        byte[]? kvRaw = File.ReadAllBytes(path);
-        Keyvault kv = new Keyvault(kvRaw, 0, kvRaw.Length);
+        var kvRaw = File.ReadAllBytes(path);
+        var kv = new Keyvault(kvRaw, 0, kvRaw.Length);
         kv.IsEncrypted = false;
         return kv;
     }
@@ -53,7 +53,7 @@ public class Keyvault
             Logger.LogDebug("Keyvault is already encrypted. Skipping...");
             return;
         }
-        
+
         Utils.ValidateCpuKey(cpuKey);
 
         Salt = Utils.GenerateSalt();
@@ -72,7 +72,7 @@ public class Keyvault
             Logger.LogDebug("Keyvault is already decrypted. Skipping...");
             return;
         }
-        
+
         Utils.ValidateCpuKey(cpuKey);
 
         Key = Utils.GetHmacKey(cpuKey, Salt);
