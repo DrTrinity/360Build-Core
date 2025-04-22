@@ -21,7 +21,7 @@ public static class Utils
         }
         catch
         {
-            return DateTime.MinValue; 
+            return DateTime.MinValue;
         }
     }
     

@@ -8,6 +8,7 @@ public class Filesystem
     public Filesystem(byte[]? encData, int offset, int version, XboxRom rom = null, int length = 0x4000)
     {
         Data = Utils.GetBytes(encData, offset, length);
+        Offset = offset;
         Rom = rom;
         Version = version;
         Length = length;
@@ -32,6 +33,7 @@ public class Filesystem
     }
 
     public byte[] Data { get; set; }
+    public int Offset { get; set; }
     public int Version { get; set; }
     public int Length { get; set; }
     public XboxRom Rom { get; set; }

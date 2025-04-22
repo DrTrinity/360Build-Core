@@ -23,7 +23,6 @@ public class Smc
     {
         var smcRaw = File.ReadAllBytes(path);
         var smc = new Smc(smcRaw, 0, smcRaw.Length);
-        smc.IsEncrypted = false;
         return smc;
     }
 

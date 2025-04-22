@@ -237,9 +237,10 @@ public class XboxRom
             fsCount++;
             if (spare.FsBlockType == Ecc.SpareData.SpareDataBlockType.FsRootEntry)
             {
+                Logger.LogDebug($"FS Root Entry @ 0x{(fsCount * PageSize) - 0x200:X}");
                 if (Filesystems.Any(fs => fs.Version == spare.FsSequence)) continue;
                 int fsOffset = (PageSize * fsCount) - PageSize;
-                Filesystems.Add(new Filesystem(Utils.GetBytes(Data, fsOffset, 0x4000), 0, spare.FsSequence, this));
+                Filesystems.Add(new Filesystem(Data, fsOffset, spare.FsSequence, this));
                         
                 Logger.LogDebug($"Filesystem found at 0x{fsOffset:X}. Version {spare.FsSequence}");
             }
